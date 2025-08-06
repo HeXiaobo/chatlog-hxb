@@ -3,8 +3,8 @@ import axios from 'axios'
 // API 基础 URL 配置
 const getBaseURL = (): string => {
   // 生产环境：使用环境变量或默认的演示 URL
-  if (process.env.NODE_ENV === 'production') {
-    return process.env.VITE_API_BASE_URL || 'https://chatlog-api-demo.example.com/api/v1'
+  if (import.meta.env.MODE === 'production') {
+    return import.meta.env.VITE_API_BASE_URL || 'https://chatlog-api-demo.example.com/api/v1'
   }
   // 开发环境：使用本地代理
   return '/api/v1'
