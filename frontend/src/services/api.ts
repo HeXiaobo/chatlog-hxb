@@ -2,11 +2,17 @@ import axios from 'axios'
 
 // API 基础 URL 配置
 const getBaseURL = (): string => {
+  console.log('Environment:', import.meta.env.MODE)
+  console.log('API URL:', import.meta.env.VITE_API_BASE_URL)
+  
   // 生产环境：使用环境变量或默认的演示 URL
-  if (import.meta.env.MODE === 'production') {
-    return import.meta.env.VITE_API_BASE_URL || 'https://chatlog-api-demo.example.com/api/v1'
+  if (import.meta.env.MODE === 'production' || import.meta.env.PROD) {
+    const apiUrl = import.meta.env.VITE_API_BASE_URL || 'https://chatlog-api-demo.example.com/api/v1'
+    console.log('Using production API URL:', apiUrl)
+    return apiUrl
   }
   // 开发环境：使用本地代理
+  console.log('Using development API URL: /api/v1')
   return '/api/v1'
 }
 

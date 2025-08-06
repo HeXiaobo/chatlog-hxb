@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
-import { Card, Row, Col, Statistic, Button, List, Tag, Space, Modal } from 'antd'
-import { SearchOutlined, QuestionCircleOutlined, TagOutlined, UploadOutlined } from '@ant-design/icons'
+import { Card, Row, Col, Statistic, Button, List, Tag, Space, Modal, Alert } from 'antd'
+import { SearchOutlined, QuestionCircleOutlined, TagOutlined, UploadOutlined, ExclamationCircleOutlined } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
 import SearchBar from '../components/search/SearchBar'
 import UploadZone from '../components/upload/UploadZone'
@@ -18,6 +18,7 @@ const HomePage: React.FC = () => {
     totalUploads: 0
   })
   const [uploadModalVisible, setUploadModalVisible] = useState(false)
+  const [apiError, setApiError] = useState<string | null>(null)
 
   useEffect(() => {
     loadData()
@@ -25,6 +26,7 @@ const HomePage: React.FC = () => {
 
   const loadData = async () => {
     setLoading(true)
+    setApiError(null)
     try {
       // 加载分类
       const categoriesResponse = await api.get<APIResponse<Category[]>>('/categories')
@@ -42,6 +44,17 @@ const HomePage: React.FC = () => {
       })
     } catch (error) {
       console.error('Failed to load data:', error)
+      setApiError('后端服务暂时不可用，当前为演示模式。完整功能需要部署后端服务。')
+      // API 调用失败时，设置默认数据以避免页面空白
+      setCategories([
+        { id: 1, name: '产品咨询', description: '产品相关问题', color: 'blue', qa_count: 0 },
+        { id: 2, name: '技术支持', description: '技术问题解答', color: 'green', qa_count: 0 },
+        { id: 3, name: '价格费用', description: '价格和费用咨询', color: 'orange', qa_count: 0 },
+        { id: 4, name: '使用教程', description: '使用方法指导', color: 'purple', qa_count: 0 },
+        { id: 5, name: '售后问题', description: '售后服务相关', color: 'red', qa_count: 0 }
+      ])
+      setRecentQAs([])
+      setStats({ totalQAs: 0, totalCategories: 5, totalUploads: 0 })
     } finally {
       setLoading(false)
     }
@@ -65,6 +78,20 @@ const HomePage: React.FC = () => {
 
   return (
     <div>
+      {/* API 错误提示 */}
+      {apiError && (
+        <Alert
+          message="服务状态提示"
+          description={apiError}
+          type="warning"
+          icon={<ExclamationCircleOutlined />}
+          showIcon
+          closable
+          style={{ marginBottom: 24 }}
+          onClose={() => setApiError(null)}
+        />
+      )}
+
       {/* 搜索区域 */}
       <Card style={{ marginBottom: 24, textAlign: 'center' }}>
         <div style={{ maxWidth: 600, margin: '0 auto' }}>
