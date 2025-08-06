@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Supabase 连接测试</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { font-family: system-ui; padding: 20px; max-width: 800px; margin: 0 auto; }
+        .test-item { padding: 10px; margin: 10px 0; border-left: 4px solid #ccc; background: #f5f5f5; }
+        .success { border-color: #52c41a; background: #f6ffed; }
+        .error { border-color: #ff4d4f; background: #fff2f0; }
+        .loading { border-color: #1890ff; background: #e6f7ff; }
+        pre { background: #f8f8f8; padding: 10px; overflow: auto; font-size: 12px; }
+        button { padding: 8px 16px; margin: 5px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Supabase 连接测试</h1>
+    <p>这个页面将测试您的 Supabase 配置是否正确</p>
+    
+    <button onclick="runTests()">开始测试</button>
+    <button onclick="clearResults()">清除结果</button>
+    
+    <div id="results"></div>
+
+    <script>
+        const SUPABASE_URL = 'https://atgkpaszasqhycvvszll.supabase.co'
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF0Z2twYXN6YXNxaHljdnZzemxsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ0OTA2OTQsImV4cCI6MjA3MDA2NjY5NH0.BSh5066lya593cXhVDCvGu0l30X1pVq33FY3z1P7410'
+        
+        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+        
+        function addResult(title, status, details = '') {
+            const results = document.getElementById('results')
+            const item = document.createElement('div')
+            item.className = `test-item ${status}`
+            item.innerHTML = `
+                <h3>${title}</h3>
+                ${details ? `<pre>${details}</pre>` : ''}
+            `
+            results.appendChild(item)
+        }
+        
+        function clearResults() {
+            document.getElementById('results').innerHTML = ''
+        }
+        
+        async function runTests() {
+            clearResults()
+            
+            try {
+                // 测试 1: 检查分类表
+                addResult('1️⃣ 检查分类表', 'loading')
+                
+                const { data: categories, error: catError } = await supabase
+                    .from('categories')
+                    .select('*')
+                    .order('id')
+                
+                if (catError) {
+                    addResult('1️⃣ 检查分类表', 'error', `错误: ${catError.message}\n详情: ${JSON.stringify(catError, null, 2)}`)
+                    return
+                }
+                
+                addResult('1️⃣ 检查分类表', 'success', `找到 ${categories.length} 个分类:\n${categories.map(c => `- ${c.name} (${c.color})`).join('\n')}`)
+                
+                // 测试 2: 检查问答表
+                addResult('2️⃣ 检查问答表', 'loading')
+                
+                const { data: qaPairs, error: qaError } = await supabase
+                    .from('qa_pairs')
+                    .select(`
+                        *,
+                        category:categories(name, color)
+                    `)
+                    .limit(3)
+                
+                if (qaError) {
+                    addResult('2️⃣ 检查问答表', 'error', `错误: ${qaError.message}`)
+                    return
+                }
+                
+                addResult('2️⃣ 检查问答表', 'success', `找到 ${qaPairs.length} 条示例问答:\n${qaPairs.map(q => `- ${q.question.substring(0, 30)}...`).join('\n')}`)
+                
+                // 测试 3: 测试搜索功能
+                addResult('3️⃣ 测试搜索功能', 'loading')
+                
+                const { data: searchResults, error: searchError } = await supabase
+                    .rpc('search_qa_pairs', {
+                        search_query: '价格',
+                        limit_count: 2
+                    })
+                
+                if (searchError) {
+                    addResult('3️⃣ 测试搜索功能', 'error', `错误: ${searchError.message}`)
+                    return
+                }
+                
+                addResult('3️⃣ 测试搜索功能', 'success', `搜索"价格"找到 ${searchResults.length} 条结果:\n${searchResults.map(r => `- ${r.question} (相关性: ${r.search_rank})`).join('\n')}`)
+                
+                // 测试 4: 测试统计功能
+                addResult('4️⃣ 测试统计功能', 'loading')
+                
+                const { data: stats, error: statsError } = await supabase
+                    .rpc('get_qa_statistics')
+                
+                if (statsError) {
+                    addResult('4️⃣ 测试统计功能', 'error', `错误: ${statsError.message}`)
+                    return
+                }
+                
+                addResult('4️⃣ 测试统计功能', 'success', `统计数据:\n- 总问答数: ${stats.total_qa}\n- 总分类数: ${stats.total_categories}\n- 平均信心度: ${stats.confidence_stats.average}`)
+                
+                // 所有测试通过
+                addResult('🎉 测试完成', 'success', 'Supabase 配置正确，所有功能正常！\n\n现在可以正常使用应用了。')
+                
+            } catch (error) {
+                addResult('❌ 测试失败', 'error', `意外错误: ${error.message}\n堆栈: ${error.stack}`)
+            }
+        }
+        
+        // 页面加载时自动测试
+        window.onload = () => {
+            setTimeout(runTests, 1000)
+        }
+    </script>
+</body>
+</html>

@@ -131,29 +131,37 @@ class SupabaseAPI {
         limit = 20 
       } = params
       
-      // 使用自定义函数进行搜索
-      const { data, error } = await supabase
-        .rpc('search_qa_pairs', {
-          search_query: query,
-          category_filter: category_id || null,
-          advisor_filter: advisor || null,
-          limit_count: limit,
-          offset_count: (page - 1) * limit
-        })
+      // 使用内置查询代替自定义函数进行搜索
+      let searchQuery = supabase
+        .from('qa_pairs')
+        .select(`
+          *,
+          category:categories(id, name, color, description)
+        `)
+      
+      // 全文搜索
+      if (query && query.trim()) {
+        searchQuery = searchQuery.textSearch('fts_vector', query)
+      }
+      
+      // 分类筛选
+      if (category_id) {
+        searchQuery = searchQuery.eq('category_id', category_id)
+      }
+      
+      // 顾问筛选
+      if (advisor) {
+        searchQuery = searchQuery.ilike('advisor', `%${advisor}%`)
+      }
+      
+      // 执行搜索查询
+      const { data, error, count } = await searchQuery
+        .order('created_at', { ascending: false })
+        .range((page - 1) * limit, page * limit - 1)
       
       if (error) throw error
       
-      // 获取总数
-      const { data: totalCount, error: countError } = await supabase
-        .rpc('count_qa_pairs', {
-          search_query: query,
-          category_filter: category_id || null,
-          advisor_filter: advisor || null
-        })
-      
-      if (countError) {
-        console.warn('获取搜索总数失败:', countError)
-      }
+      const totalCount = count || 0
       
       return { 
         data, 
@@ -326,16 +334,77 @@ class SupabaseAPI {
   // ==================== 统计信息相关 ====================
 
   /**
-   * 获取统计信息
+   * 获取统计信息 (临时简化版本，避免自定义函数问题)
    */
   async getStatistics(): Promise<ApiResponse<Statistics>> {
     try {
-      const { data, error } = await supabase
-        .rpc('get_qa_statistics')
+      // 使用简单查询代替有问题的自定义函数
+      const [
+        { count: totalQA },
+        { count: totalCategories },
+        categoriesData,
+        advisorsData
+      ] = await Promise.all([
+        supabase.from('qa_pairs').select('*', { count: 'exact', head: true }),
+        supabase.from('categories').select('*', { count: 'exact', head: true }),
+        supabase.from('categories').select('id, name, color, description'),
+        supabase.from('qa_pairs').select('advisor').not('advisor', 'is', null).neq('advisor', '')
+      ])
+
+      // 计算分类统计
+      const categoryStats = await Promise.all(
+        (categoriesData.data || []).map(async (cat) => {
+          const { count } = await supabase
+            .from('qa_pairs')
+            .select('*', { count: 'exact', head: true })
+            .eq('category_id', cat.id)
+          
+          return {
+            ...cat,
+            qa_count: count || 0
+          }
+        })
+      )
+
+      // 计算顾问统计
+      const advisorCounts: Record<string, number> = {}
+      advisorsData.data?.forEach(item => {
+        if (item.advisor) {
+          advisorCounts[item.advisor] = (advisorCounts[item.advisor] || 0) + 1
+        }
+      })
       
-      if (error) throw error
+      const topAdvisors = Object.entries(advisorCounts)
+        .sort(([,a], [,b]) => b - a)
+        .slice(0, 10)
+        .map(([advisor, count]) => ({ advisor, count }))
+
+      // 获取信心度统计
+      const { data: confidenceData } = await supabase
+        .from('qa_pairs')
+        .select('confidence')
+        .not('confidence', 'is', null)
+
+      const confidences = confidenceData?.map(item => item.confidence) || []
+      const avgConfidence = confidences.length > 0 
+        ? confidences.reduce((sum, conf) => sum + conf, 0) / confidences.length 
+        : 0
+
+      const stats: Statistics = {
+        total_qa: totalQA || 0,
+        total_categories: totalCategories || 0,
+        categories_with_count: categoryStats,
+        top_advisors: topAdvisors,
+        confidence_stats: {
+          average: Math.round(avgConfidence * 1000) / 1000,
+          high_confidence: confidences.filter(c => c >= 0.8).length,
+          medium_confidence: confidences.filter(c => c >= 0.5 && c < 0.8).length,
+          low_confidence: confidences.filter(c => c < 0.5).length
+        },
+        recent_uploads: []
+      }
       
-      return { data, error: null }
+      return { data: stats, error: null }
     } catch (error) {
       console.error('获取统计信息失败:', error)
       return { data: null, error }
