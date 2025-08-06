@@ -4,7 +4,6 @@ import { SearchOutlined, QuestionCircleOutlined, TagOutlined, UploadOutlined, Ex
 import { useNavigate } from 'react-router-dom'
 import SearchBar from '../components/search/SearchBar'
 import UploadZone from '../components/upload/UploadZone'
-import SupabaseTest from '../components/admin/SupabaseTest'
 import type { Category, QAPair, APIResponse, SearchFilters, UploadResponse } from '../types'
 import { apiAdapter as api } from '../services/api-adapter'
 
@@ -92,9 +91,6 @@ const HomePage: React.FC = () => {
 
   return (
     <div>
-      {/* Supabase 连接测试 */}
-      <SupabaseTest />
-
       {/* API 错误提示 */}
       {apiError && (
         <Alert
