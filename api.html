@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API 服务未配置 - 微信群问答知识库</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 600px;
+            text-align: center;
+            padding: 2rem;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            color: #ffd700;
+        }
+        .status-code {
+            font-size: 6rem;
+            font-weight: bold;
+            color: #ff6b6b;
+            text-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            margin: 1rem 0;
+        }
+        .message {
+            font-size: 1.2rem;
+            margin-bottom: 2rem;
+            line-height: 1.6;
+        }
+        .info {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin: 2rem 0;
+            text-align: left;
+        }
+        .info h3 {
+            color: #ffd700;
+            margin-top: 0;
+        }
+        .info ul {
+            margin: 0.5rem 0;
+            padding-left: 1.5rem;
+        }
+        .info li {
+            margin: 0.5rem 0;
+        }
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            background: #4CAF50;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            transition: background 0.3s;
+            margin: 0.5rem;
+        }
+        .btn:hover {
+            background: #45a049;
+        }
+        .btn-secondary {
+            background: #2196F3;
+        }
+        .btn-secondary:hover {
+            background: #1976D2;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="status-code">API</div>
+        <h1>🚀 后端服务未配置</h1>
+        <div class="message">
+            当前为前端演示版本，后端 API 服务需要单独部署。
+        </div>
+        
+        <div class="info">
+            <h3>💡 完整部署指南</h3>
+            <ul>
+                <li><strong>前端</strong>：已成功部署到 Vercel</li>
+                <li><strong>后端</strong>：需要部署到 Railway、Render 或其他服务</li>
+                <li><strong>数据库</strong>：建议使用 PostgreSQL 或 MySQL</li>
+                <li><strong>配置</strong>：更新 .env.production 中的 API 地址</li>
+            </ul>
+        </div>
+
+        <div class="info">
+            <h3>🛠️ 快速部署后端</h3>
+            <ul>
+                <li>访问项目仓库获取完整代码</li>
+                <li>使用 Docker 或直接部署到云平台</li>
+                <li>配置数据库连接和环境变量</li>
+                <li>更新前端 API 配置并重新部署</li>
+            </ul>
+        </div>
+
+        <a href="/" class="btn">🏠 返回首页</a>
+        <a href="https://github.com/HeXiaobo/chatlog-hxb" class="btn btn-secondary" target="_blank">📚 查看文档</a>
+    </div>
+</body>
+</html>

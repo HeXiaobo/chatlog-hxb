@@ -1,8 +1,18 @@
 import axios from 'axios'
 
+// API 基础 URL 配置
+const getBaseURL = (): string => {
+  // 生产环境：使用环境变量或默认的演示 URL
+  if (process.env.NODE_ENV === 'production') {
+    return process.env.VITE_API_BASE_URL || 'https://chatlog-api-demo.example.com/api/v1'
+  }
+  // 开发环境：使用本地代理
+  return '/api/v1'
+}
+
 // 创建 axios 实例
 const api = axios.create({
-  baseURL: '/api/v1',
+  baseURL: getBaseURL(),
   timeout: 30000,
   headers: {
     'Content-Type': 'application/json'
