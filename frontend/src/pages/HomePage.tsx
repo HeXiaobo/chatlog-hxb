@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom'
 import SearchBar from '../components/search/SearchBar'
 import UploadZone from '../components/upload/UploadZone'
 import type { Category, QAPair, APIResponse, SearchFilters, UploadResponse } from '../types'
-import api from '../services/api'
+import { apiAdapter as api } from '../services/api-adapter'
 
 const HomePage: React.FC = () => {
   const navigate = useNavigate()
@@ -29,29 +29,42 @@ const HomePage: React.FC = () => {
     setApiError(null)
     try {
       // 加载分类
-      const categoriesResponse = await api.get<APIResponse<Category[]>>('/categories')
-      setCategories(categoriesResponse.data.data || [])
+      const categoriesResponse = await api.getCategories()
+      setCategories(categoriesResponse.data || [])
 
       // 加载最近的问答
-      const qasResponse = await api.get<APIResponse<QAPair[]>>('/qa?limit=5')
-      setRecentQAs(qasResponse.data.data || [])
+      const qasResponse = await api.getQAPairs({ limit: 5 })
+      setRecentQAs(qasResponse.data || [])
 
-      // 设置统计数据
+      // 加载统计数据
+      const statsResponse = await api.getStatistics()
+      const statsData = statsResponse.data || {}
+      
       setStats({
-        totalQAs: qasResponse.data.total || 0,
-        totalCategories: categoriesResponse.data.data?.length || 0,
-        totalUploads: 0 // 暂时设为0，需要后端支持
+        totalQAs: statsData.total_qa || 0,
+        totalCategories: statsData.total_categories || 0,
+        totalUploads: 0 // 暂时设为0
       })
+
+      // 检查是否有错误消息需要显示
+      if (!categoriesResponse.success && categoriesResponse.message) {
+        setApiError(categoriesResponse.message)
+      } else if (!qasResponse.success && qasResponse.message) {
+        setApiError(qasResponse.message)
+      } else if (!statsResponse.success && statsResponse.message) {
+        setApiError(statsResponse.message)
+      }
     } catch (error) {
       console.error('Failed to load data:', error)
-      setApiError('后端服务暂时不可用，当前为演示模式。完整功能需要部署后端服务。')
-      // API 调用失败时，设置默认数据以避免页面空白
+      setApiError('数据加载失败，请检查网络连接或 Supabase 配置。')
+      
+      // 设置默认数据
       setCategories([
-        { id: 1, name: '产品咨询', description: '产品相关问题', color: 'blue', qa_count: 0 },
-        { id: 2, name: '技术支持', description: '技术问题解答', color: 'green', qa_count: 0 },
-        { id: 3, name: '价格费用', description: '价格和费用咨询', color: 'orange', qa_count: 0 },
-        { id: 4, name: '使用教程', description: '使用方法指导', color: 'purple', qa_count: 0 },
-        { id: 5, name: '售后问题', description: '售后服务相关', color: 'red', qa_count: 0 }
+        { id: 1, name: '产品咨询', description: '产品相关问题', color: '#1890ff', qa_count: 0, created_at: '', updated_at: '' },
+        { id: 2, name: '技术支持', description: '技术问题解答', color: '#f5222d', qa_count: 0, created_at: '', updated_at: '' },
+        { id: 3, name: '价格费用', description: '价格和费用咨询', color: '#52c41a', qa_count: 0, created_at: '', updated_at: '' },
+        { id: 4, name: '使用教程', description: '使用方法指导', color: '#faad14', qa_count: 0, created_at: '', updated_at: '' },
+        { id: 5, name: '售后问题', description: '售后服务相关', color: '#722ed1', qa_count: 0, created_at: '', updated_at: '' }
       ])
       setRecentQAs([])
       setStats({ totalQAs: 0, totalCategories: 5, totalUploads: 0 })
