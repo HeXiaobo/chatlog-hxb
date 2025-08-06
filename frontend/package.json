@@ -1,0 +1,29 @@
+{
+  "name": "chatlog-frontend",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "test": "jest"
+  },
+  "dependencies": {
+    "@ant-design/icons": "^5.2.6",
+    "@types/react-window": "^1.8.8",
+    "antd": "^5.12.8",
+    "axios": "^1.6.2",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^6.20.1",
+    "react-window": "^1.8.11"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.54.2",
+    "@types/react": "^18.2.43",
+    "@types/react-dom": "^18.2.17",
+    "@vitejs/plugin-react": "^4.2.0",
+    "typescript": "^5.2.2",
+    "vite": "^5.0.8"
+  }
+}
