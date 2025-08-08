@@ -1,7 +1,7 @@
 import React from 'react'
 import { Layout, Menu } from 'antd'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { HomeOutlined, SearchOutlined, SettingOutlined } from '@ant-design/icons'
+import { HomeOutlined, SearchOutlined, SettingOutlined, CloudDownloadOutlined, RobotOutlined } from '@ant-design/icons'
 
 const { Header: AntHeader } = Layout
 
@@ -19,6 +19,16 @@ const Header: React.FC = () => {
       key: '/search',
       icon: <SearchOutlined />,
       label: '搜索',
+    },
+    {
+      key: '/import',
+      icon: <CloudDownloadOutlined />,
+      label: '导入记录',
+    },
+    {
+      key: '/ai',
+      icon: <RobotOutlined />,
+      label: 'AI管理',
     },
     {
       key: '/admin',

@@ -35,12 +35,22 @@ const SearchPageNew: React.FC = () => {
     loadCategories()
   }, [])
 
-  // 执行搜索
+  // 执行搜索 - 只在URL参数变化时执行
   useEffect(() => {
-    if (searchQuery || Object.keys(searchFilters).some(key => searchFilters[key as keyof SearchFilters])) {
+    const hasSearchParams = searchQuery || Object.keys(searchFilters).some(key => searchFilters[key as keyof SearchFilters])
+    if (hasSearchParams) {
       handleSearch(searchQuery, searchFilters, true)
     }
   }, [searchQuery, searchFilters])
+  
+  // 页面首次加载时如果没有搜索参数，显示最新记录
+  useEffect(() => {
+    const hasURLParams = searchParams.get('q') || searchParams.get('category')
+    if (!hasURLParams) {
+      // 显示最新的问答记录
+      handleSearch('', {}, true)
+    }
+  }, [])
 
   const loadCategories = async () => {
     try {
@@ -58,11 +68,12 @@ const SearchPageNew: React.FC = () => {
     filters: SearchFilters = {}, 
     reset = false
   ) => {
-    if (!query.trim() && !Object.keys(filters).some(key => filters[key as keyof SearchFilters])) {
-      setQAData([])
-      setTotal(0)
-      return
-    }
+    // 允许空查询以显示所有记录
+    // if (!query.trim() && !Object.keys(filters).some(key => filters[key as keyof SearchFilters])) {
+    //   setQAData([])
+    //   setTotal(0)
+    //   return
+    // }
 
     if (reset) {
       setCurrentPage(1)
@@ -240,7 +251,7 @@ const SearchPageNew: React.FC = () => {
               <Spin size="large" />
               <div style={{ marginTop: 16 }}>搜索中...</div>
             </div>
-          ) : searchQuery || Object.keys(searchFilters).length > 0 ? (
+          ) : searchQuery ? (
             <Empty
               description={
                 <Space direction="vertical">
@@ -255,17 +266,27 @@ const SearchPageNew: React.FC = () => {
               <Button onClick={() => {
                 setSearchQuery('')
                 setSearchFilters({})
-                setQAData([])
-                setTotal(0)
+                handleSearch('', {}, true)
               }}>
-                清空搜索
+                查看所有记录
               </Button>
             </Empty>
           ) : (
             <Empty
-              description="请输入关键词开始搜索"
+              description={
+                <Space direction="vertical">
+                  <span>暂无问答记录</span>
+                  <span style={{ color: '#999', fontSize: '12px' }}>
+                    可以通过上传文件或微信导入来添加内容
+                  </span>
+                </Space>
+              }
               image={Empty.PRESENTED_IMAGE_SIMPLE}
-            />
+            >
+              <Button onClick={() => navigate('/')}>
+                返回首页
+              </Button>
+            </Empty>
           )}
         </Card>
       )}

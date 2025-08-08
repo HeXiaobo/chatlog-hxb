@@ -5,6 +5,8 @@ import Header from './components/common/Header'
 import HomePage from './pages/HomePage'
 import SearchPage from './pages/SearchPage'
 import AdminPage from './pages/AdminPage'
+import ChatlogImportPage from './pages/ChatlogImportPage'
+import AIManagementPage from './pages/AIManagementPage'
 
 const { Content, Footer } = Layout
 
@@ -18,6 +20,8 @@ const App: React.FC = () => {
             <Route path="/" element={<HomePage />} />
             <Route path="/search" element={<SearchPage />} />
             <Route path="/admin" element={<AdminPage />} />
+            <Route path="/import" element={<ChatlogImportPage />} />
+            <Route path="/ai" element={<AIManagementPage />} />
           </Routes>
         </div>
       </Content>

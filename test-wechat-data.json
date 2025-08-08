@@ -1,0 +1,58 @@
+[
+  {
+    "id": "msg_001",
+    "timestamp": 1704067200000,
+    "from_user": "客户张三",
+    "content": "请问你们的产品有什么功能？",
+    "message_type": "text"
+  },
+  {
+    "id": "msg_002", 
+    "timestamp": 1704067260000,
+    "from_user": "客服小李",
+    "content": "我们的产品主要有以下功能：1. 数据分析 2. 报表生成 3. 用户管理。可以帮助企业提高工作效率。",
+    "message_type": "text"
+  },
+  {
+    "id": "msg_003",
+    "timestamp": 1704067320000,
+    "from_user": "客户王五",
+    "content": "价格是多少钱？",
+    "message_type": "text"
+  },
+  {
+    "id": "msg_004",
+    "timestamp": 1704067380000,
+    "from_user": "客服小李", 
+    "content": "我们有三个版本：基础版299元/月，专业版599元/月，企业版1299元/月。您可以根据需求选择。",
+    "message_type": "text"
+  },
+  {
+    "id": "msg_005",
+    "timestamp": 1704067440000,
+    "from_user": "客户赵六",
+    "content": "怎么使用这个系统？",
+    "message_type": "text"
+  },
+  {
+    "id": "msg_006",
+    "timestamp": 1704067500000,
+    "from_user": "客服小李",
+    "content": "使用很简单：1. 注册登录 2. 上传数据 3. 选择分析模板 4. 查看结果。我们也提供详细的使用教程和技术支持。",
+    "message_type": "text"
+  },
+  {
+    "id": "msg_007",
+    "timestamp": 1704067560000,
+    "from_user": "客户李四",
+    "content": "系统出现错误怎么办？",
+    "message_type": "text"
+  },
+  {
+    "id": "msg_008",
+    "timestamp": 1704067620000,
+    "from_user": "客服小李",
+    "content": "如果遇到技术问题，您可以：1. 查看帮助文档 2. 联系在线客服 3. 提交工单。我们的技术团队会及时处理您的问题。",
+    "message_type": "text"
+  }
+]

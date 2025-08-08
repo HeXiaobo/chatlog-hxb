@@ -329,7 +329,7 @@ def _get_system_statistics():
         config_info = {
             'debug_mode': current_app.config.get('DEBUG', False),
             'max_file_size_mb': (current_app.config.get('MAX_CONTENT_LENGTH', 0) // (1024 * 1024)),
-            'upload_folder': current_app.config.get('UPLOAD_FOLDER', ''),
+            'upload_folder': str(current_app.config.get('UPLOAD_FOLDER', '')),
             'database_uri': current_app.config.get('SQLALCHEMY_DATABASE_URI', '').split('/')[-1]  # 只显示数据库名
         }
         

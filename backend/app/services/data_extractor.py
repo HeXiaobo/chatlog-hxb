@@ -29,7 +29,7 @@ class DataExtractor:
     def __init__(self):
         self.qa_patterns = self._init_qa_patterns()
         self.noise_patterns = self._init_noise_patterns()
-        self.confidence_threshold = 0.6
+        self.confidence_threshold = 0.1  # 进一步降低阈值，适应真实聊天场景
     
     def _init_qa_patterns(self) -> List[Dict[str, Any]]:
         """初始化问答识别模式"""
@@ -73,6 +73,39 @@ class DataExtractor:
                     r'(第[一二三四五六七八九十])',
                 ],
                 'confidence_boost': 0.25
+            },
+            {
+                'name': 'casual_conversation',
+                'question_patterns': [
+                    r'.*[?？].*',  # 包含问号的任何内容
+                    r'(什么时候|几点|多久|时间)',  # 时间相关问题
+                    r'(哪里|在哪|地点|位置)',  # 地点相关问题
+                    r'(方便|可以|能不能|行吗)',  # 询问可行性
+                ],
+                'answer_indicators': [
+                    r'(可以|行|好|没问题|OK)',  # 肯定回答
+                    r'(不行|不可以|不方便|没时间)',  # 否定回答
+                    r'(点|分钟|小时|明天|今天)',  # 时间回答
+                ],
+                'confidence_boost': 0.15
+            },
+            {
+                'name': 'educational_consultation',
+                'question_patterns': [
+                    r'.*[您你].*(有|什么|怎么).*(好的)?.*[办法方法建议吗].*[？?]?',  # 请教问题：您有好的办法吗？
+                    r'.*老师.*[，,].*[问咨询请教].*',  # 老师，我想咨询/问...
+                    r'.*[如何怎么什么].*[申请办理处理].*[？?]?',  # 如何申请...
+                    r'.*(FAFSA|CSS|学费|助学金|申请|学校|孩子).*[问题困惑疑问].*',  # 教育相关问题
+                    r'.*[该怎么应该].*[办做处理].*[？?]?',  # 该怎么办？
+                ],
+                'answer_indicators': [
+                    r'(我想说|我建议|我的建议|根据经验)',  # 专业建议开头
+                    r'(首先|第一|第二|最重要的是)',  # 步骤式回答
+                    r'(这个问题|关于这个|针对这种情况)',  # 针对性回答
+                    r'(需要注意|要记住|关键是)',  # 要点提醒
+                    r'(申请|学校|FAFSA|CSS|助学金)',  # 专业术语回答
+                ],
+                'confidence_boost': 0.3
             }
         ]
     
@@ -101,8 +134,43 @@ class DataExtractor:
         """
         try:
             data = json.loads(json_data)
+            print(f"[DEBUG] === DEBUGGING IMPORT ===")
+            print(f"[DEBUG] Data from {source_file}")
+            print(f"[DEBUG] Data type: {type(data)}")
+            logger.info(f"=== DEBUGGING IMPORT ===")
+            logger.info(f"Data from {source_file}")
+            logger.info(f"Data type: {type(data)}")
+            
+            if isinstance(data, dict):
+                print(f"[DEBUG] Dict keys: {list(data.keys())}")
+                logger.info(f"Dict keys: {list(data.keys())}")
+            elif isinstance(data, list):
+                print(f"[DEBUG] List length: {len(data)}")
+                logger.info(f"List length: {len(data)}")
+                if len(data) > 0:
+                    print(f"[DEBUG] First item type: {type(data[0])}")
+                    logger.info(f"First item type: {type(data[0])}")
+                    if isinstance(data[0], dict):
+                        print(f"[DEBUG] First item keys: {list(data[0].keys())}")
+                        print(f"[DEBUG] First item sample: {str(data[0])[:300]}")
+                        logger.info(f"First item keys: {list(data[0].keys())}")
+                        logger.info(f"First item sample: {str(data[0])[:300]}")
+            
             messages = self._parse_messages(data)
+            logger.info(f"=== AFTER PARSING ===")
+            logger.info(f"Parsed {len(messages)} normalized messages")
+            
+            # 打印前几条消息样本
+            for i, msg in enumerate(messages[:3]):
+                logger.info(f"Message {i+1}: sender={msg.get('sender')}, content={msg.get('content', '')[:50]}...")
+            
+            if len(messages) == 0:
+                logger.warning(f"No valid messages found in {source_file}")
+                return []
+            
             qa_candidates = self._extract_qa_pairs(messages, source_file)
+            logger.info(f"=== FINAL RESULT ===")
+            logger.info(f"Extracted {len(qa_candidates)} QA candidates from {source_file}")
             return qa_candidates
         except Exception as e:
             logger.error(f"Failed to extract data from {source_file}: {str(e)}")
@@ -130,15 +198,49 @@ class DataExtractor:
         
         for msg in raw_messages:
             try:
+                # 检查是否是前端转换的简化格式
+                if self._is_frontend_format(msg):
+                    logger.info(f"Processing frontend format message: {msg.get('id', 'no-id')}")
+                    normalized_msg = self._normalize_frontend_message(msg)
+                    if normalized_msg:
+                        if self._is_noise(normalized_msg['content']):
+                            logger.info(f"Message filtered as noise: {normalized_msg['content'][:50]}")
+                        else:
+                            logger.info(f"Added normalized message: {normalized_msg['content'][:50]}")
+                            normalized.append(normalized_msg)
+                    else:
+                        logger.info(f"Failed to normalize message: {msg}")
+                    continue
+                
+                # 处理原始chatlog格式
+                # 跳过chatlog格式的无效消息类型
+                msg_type = msg.get('type', 1)
+                if msg_type in [3, 10000]:  # 系统消息等无效类型
+                    continue
+                
+                # 跳过没有发送者的消息
+                if not msg.get('senderName') and not msg.get('sender') and not msg.get('from_user'):
+                    continue
+                
+                content = self._extract_content(msg)
+                
+                # 跳过内容过短或为空的消息 (放宽限制以便原始消息保存)
+                if not content or len(content.strip()) < 2:
+                    continue
+                
+                # 跳过纯表情或特殊字符
+                if re.match(r'^[\s\U0001F300-\U0001F9FF\u2600-\u27BF\u2B05-\u2B07\u2934-\u2935\u2B05-\u2B07\u25B6\u25C0\u23CF-\u23FA\U0001F680-\U0001F6FF]+$', content):
+                    continue
+                
                 normalized_msg = {
-                    'content': self._extract_content(msg),
+                    'content': content,
                     'sender': self._extract_sender(msg),
                     'timestamp': self._extract_timestamp(msg),
-                    'msg_type': msg.get('type', 'text'),
+                    'msg_type': msg_type,
                     'original': msg
                 }
                 
-                if normalized_msg['content'] and not self._is_noise(normalized_msg['content']):
+                if not self._is_noise(normalized_msg['content']):
                     normalized.append(normalized_msg)
             except Exception as e:
                 logger.debug(f"Failed to normalize message: {str(e)}")
@@ -146,21 +248,105 @@ class DataExtractor:
         
         return normalized
     
+    def _is_frontend_format(self, msg: Dict[str, Any]) -> bool:
+        """判断是否是前端转换的简化格式"""
+        # 前端格式特征：有id, timestamp, from_user, content, message_type字段
+        required_fields = ['id', 'timestamp', 'from_user', 'content', 'message_type']
+        result = all(field in msg for field in required_fields)
+        
+        # 如果不是前端格式，检查是否是原始chatlog格式但有基本字段
+        if not result:
+            # 检查是否有基本的消息结构（更宽松的检测）
+            basic_fields = ['id', 'content'] 
+            has_sender = any(field in msg for field in ['senderName', 'sender', 'from_user', 'from'])
+            has_basic = all(field in msg for field in basic_fields) and has_sender
+            
+            if has_basic:
+                logger.debug(f"Detected basic message format with fields: {list(msg.keys())}")
+                return True
+            
+            logger.debug(f"Not frontend format - missing fields: {[f for f in required_fields if f not in msg]}")
+            logger.debug(f"Available fields: {list(msg.keys())}")
+        
+        return result
+    
+    def _normalize_frontend_message(self, msg: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """标准化前端转换的消息格式"""
+        try:
+            content = str(msg.get('content', '')).strip()
+            
+            # 跳过内容过短或为空的消息 (进一步放宽以支持原始消息保存)
+            if not content or len(content) < 2:
+                return None
+            
+            # 跳过纯表情或特殊字符
+            if re.match(r'^[\s\U0001F300-\U0001F9FF\u2600-\u27BF\u2B05-\u2B07\u2934-\u2935\u2B05-\u2B07\u25B6\u25C0\u23CF-\u23FA\U0001F680-\U0001F6FF]+$', content):
+                return None
+            
+            # 解析时间戳（支持多种格式）
+            parsed_timestamp = self._extract_timestamp(msg)
+            
+            # 提取发送者（支持多种字段名）
+            sender = self._extract_sender(msg)
+            
+            return {
+                'content': content,
+                'sender': sender,
+                'timestamp': parsed_timestamp,
+                'msg_type': 1,  # 文本消息
+                'original': msg
+            }
+        except Exception as e:
+            logger.debug(f"Failed to normalize frontend message: {str(e)}")
+            return None
+    
     def _extract_content(self, msg: Dict[str, Any]) -> str:
         """提取消息内容"""
         content = ''
         
-        # 尝试不同的字段名
-        for field in ['content', 'text', 'message', 'body']:
-            if field in msg:
-                content = str(msg[field]).strip()
-                break
+        # 优先处理chatlog格式的复杂内容结构
+        if 'contents' in msg and isinstance(msg['contents'], dict):
+            contents = msg['contents']
+            
+            # 处理描述内容
+            if contents.get('desc'):
+                content = str(contents['desc']).strip()
+            
+            # 处理嵌套的聊天记录内容
+            elif contents.get('recordInfo') and contents['recordInfo'].get('DataList'):
+                data_list = contents['recordInfo']['DataList']
+                if data_list.get('DataItems'):
+                    for item in data_list['DataItems']:
+                        if item.get('DataDesc'):
+                            nested_content = str(item['DataDesc']).strip()
+                            if nested_content and len(nested_content) > len(content):
+                                content = nested_content
+        
+        # 如果没有找到复杂内容，尝试标准字段
+        if not content:
+            for field in ['content', 'text', 'message', 'body']:
+                if field in msg and msg[field]:
+                    content = str(msg[field]).strip()
+                    break
+        
+        # 清理内容格式
+        if content:
+            # 移除用户名前缀（如 "林: "）
+            import re
+            content = re.sub(r'^[^:：]+[:：]\s*', '', content)
+            # 移除多余的空白字符
+            content = re.sub(r'\s+', ' ', content).strip()
         
         return content
     
     def _extract_sender(self, msg: Dict[str, Any]) -> str:
         """提取发送者信息"""
-        for field in ['sender', 'from', 'user', 'nickname', 'name']:
+        # 优先处理chatlog格式的发送者字段
+        if 'senderName' in msg and msg['senderName']:
+            return str(msg['senderName']).strip()
+        
+        # 尝试其他常见字段
+        for field in ['sender', 'from', 'user', 'nickname', 'name', 'from_user']:
             if field in msg and msg[field]:
                 return str(msg[field]).strip()
         return 'Unknown'
@@ -170,39 +356,65 @@ class DataExtractor:
         timestamp = None
         
         for field in ['timestamp', 'time', 'created_at', 'date']:
-            if field in msg and msg[field]:
-                try:
-                    timestamp = msg[field]
-                    break
-                except:
-                    continue
+            if field in msg and msg[field] is not None:
+                timestamp = msg[field]
+                logger.debug(f"Found timestamp field '{field}': {timestamp} (type: {type(timestamp)})")
+                break
         
-        if timestamp:
+        if timestamp is not None:
             try:
                 if isinstance(timestamp, str):
-                    # 尝试解析字符串时间
+                    logger.debug(f"Parsing string timestamp: {timestamp}")
+                    # 尝试解析字符串时间，支持chatlog的ISO格式
                     formats = [
                         '%Y-%m-%d %H:%M:%S',
                         '%Y/%m/%d %H:%M:%S',
                         '%Y-%m-%dT%H:%M:%S',
-                        '%Y-%m-%dT%H:%M:%SZ'
+                        '%Y-%m-%dT%H:%M:%SZ',
+                        '%Y-%m-%dT%H:%M:%S.%f',
+                        '%Y-%m-%dT%H:%M:%S.%fZ'
                     ]
                     for fmt in formats:
                         try:
-                            return datetime.strptime(timestamp, fmt)
+                            result = datetime.strptime(timestamp, fmt)
+                            logger.debug(f"Successfully parsed with format {fmt}: {result}")
+                            return result
                         except ValueError:
                             continue
+                    
+                    # 处理chatlog的复杂ISO格式（如2025-07-28T09:21:50+08:00）
+                    try:
+                        # 移除时区信息后解析
+                        clean_timestamp = re.sub(r'[+\-]\d{2}:\d{2}$', '', timestamp)
+                        clean_timestamp = clean_timestamp.replace('Z', '')
+                        for fmt in ['%Y-%m-%dT%H:%M:%S', '%Y-%m-%dT%H:%M:%S.%f']:
+                            try:
+                                result = datetime.strptime(clean_timestamp, fmt)
+                                logger.debug(f"Successfully parsed cleaned timestamp with format {fmt}: {result}")
+                                return result
+                            except ValueError:
+                                continue
+                    except:
+                        pass
                 elif isinstance(timestamp, (int, float)):
-                    # Unix时间戳
-                    if timestamp > 1e10:  # 毫秒时间戳
+                    logger.debug(f"Parsing numeric timestamp: {timestamp}")
+                    # Unix时间戳 - 前端parseTimestamp返回的是毫秒时间戳
+                    if timestamp > 1e12:  # 毫秒时间戳（调整阈值）
                         timestamp = timestamp / 1000
-                    return datetime.fromtimestamp(timestamp)
+                    elif timestamp > 1e10:  # 也可能是毫秒
+                        timestamp = timestamp / 1000
+                    result = datetime.fromtimestamp(timestamp)
+                    logger.debug(f"Successfully parsed numeric timestamp: {result}")
+                    return result
                 elif isinstance(timestamp, datetime):
+                    logger.debug(f"Using datetime object directly: {timestamp}")
                     return timestamp
             except Exception as e:
-                logger.debug(f"Failed to parse timestamp {timestamp}: {str(e)}")
+                logger.warning(f"Failed to parse timestamp {timestamp}: {str(e)}")
         
-        return datetime.now()
+        default_time = datetime.now()
+        logger.debug(f"Using default timestamp: {default_time}")
+        return default_time
     
     def _is_noise(self, content: str) -> bool:
         """判断是否为噪声内容"""
@@ -255,21 +467,36 @@ class DataExtractor:
             question_score += 0.5
         
         # 包含疑问词
-        question_words = ['什么', '如何', '怎么', '为什么', '哪里', '哪个', '能否', '可以', '请问']
+        question_words = ['什么', '如何', '怎么', '为什么', '哪里', '哪个', '能否', '可以', '请问', '有没有', '您有', '老师']
         for word in question_words:
             if word in content:
                 question_score += 0.5
                 break
         
-        return question_score >= 1
+        # 教育咨询特殊词汇加分
+        educational_words = ['FAFSA', 'CSS', '学费', '助学金', '申请', '学校', '孩子', '办法', '建议']
+        for word in educational_words:
+            if word in content:
+                question_score += 0.3
+                break
+        
+        # 长文本中的问题模式（如：...您有好的办法吗？）
+        if re.search(r'.*[您你].*(有|什么|怎么).*(好的)?.*[办法方法建议].*[吗？?]?', content):
+            question_score += 0.8
+        
+        # 求助模式
+        if re.search(r'.*(老师|请教|咨询|求助|帮忙).*', content):
+            question_score += 0.4
+            
+        return question_score >= 0.3  # 保持较低阈值
     
     def _find_answers(self, messages: List[Dict[str, Any]], question_index: int, question_msg: Dict[str, Any]) -> List[Tuple[Dict[str, Any], float]]:
         """寻找问题的答案"""
         answers = []
         question_time = question_msg['timestamp']
         
-        # 在问题后的10条消息中寻找答案
-        search_range = min(len(messages), question_index + 11)
+        # 在问题后的15条消息中寻找答案（教育咨询场景答案可能较远）
+        search_range = min(len(messages), question_index + 16)
         
         for i in range(question_index + 1, search_range):
             candidate_msg = messages[i]
@@ -278,9 +505,9 @@ class DataExtractor:
             if candidate_msg['sender'] == question_msg['sender']:
                 continue
             
-            # 时间间隔不能太长（5分钟内）
+            # 时间间隔不能太长（教育咨询允许30分钟内）
             time_diff = (candidate_msg['timestamp'] - question_time).total_seconds()
-            if time_diff > 300:  # 5分钟
+            if time_diff > 1800:  # 30分钟，因为专业回答需要更多时间准备
                 break
             
             # 计算答案置信度
@@ -289,7 +516,7 @@ class DataExtractor:
                 candidate_msg['content']
             )
             
-            if confidence > 0.3:  # 最低答案阈值
+            if confidence > 0.1:  # 最低答案阈值，更宽松
                 candidate_msg['index'] = i  # 添加索引信息
                 answers.append((candidate_msg, confidence))
         

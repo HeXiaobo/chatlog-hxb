@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>文件上传自动诊断工具</title>
+    <style>
+        body { font-family: 'Segoe UI', Arial, sans-serif; margin: 20px; line-height: 1.6; }
+        .container { max-width: 1000px; margin: 0 auto; }
+        .test { margin: 15px 0; padding: 15px; border-radius: 8px; border-left: 4px solid #ddd; }
+        .success { background: #d4edda; border-left-color: #28a745; }
+        .error { background: #f8d7da; border-left-color: #dc3545; }
+        .info { background: #d1ecf1; border-left-color: #17a2b8; }
+        .warning { background: #fff3cd; border-left-color: #ffc107; }
+        button { 
+            padding: 12px 24px; margin: 8px; 
+            background: #007bff; color: white; 
+            border: none; border-radius: 6px; 
+            cursor: pointer; font-size: 14px; 
+        }
+        button:hover { background: #0056b3; }
+        button:disabled { background: #6c757d; cursor: not-allowed; }
+        pre { background: #f8f9fa; padding: 15px; border-radius: 6px; overflow-x: auto; font-size: 12px; }
+        .spinner { display: inline-block; width: 20px; height: 20px; border: 3px solid #f3f3f3; border-top: 3px solid #3498db; border-radius: 50%; animation: spin 2s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .progress { width: 100%; background-color: #e9ecef; border-radius: 4px; margin: 10px 0; }
+        .progress-bar { height: 20px; background-color: #007bff; border-radius: 4px; transition: width 0.3s ease; }
+        h1 { color: #333; border-bottom: 3px solid #007bff; padding-bottom: 10px; }
+        h3 { color: #495057; margin-top: 30px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 ChatLog 文件上传自动诊断工具</h1>
+        <p>这个工具将自动测试文件上传流程的所有环节，精确定位问题所在。</p>
+        
+        <div>
+            <button id="startBtn" onclick="runFullDiagnosis()">🚀 开始自动诊断</button>
+            <button onclick="clearResults()">🗑️ 清空结果</button>
+            <button onclick="testSingleStep()">🔍 单步测试</button>
+        </div>
+        
+        <div class="progress" id="progressContainer" style="display: none;">
+            <div class="progress-bar" id="progressBar" style="width: 0%"></div>
+        </div>
+        
+        <div id="results"></div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.38.0/dist/umd/supabase.js"></script>
+    <script>
+        // Supabase 配置
+        const SUPABASE_URL = 'https://atgkpaszasqhycvvszll.supabase.co'
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF0Z2twYXN6YXNxaHljdnZzemxsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ0OTA2OTQsImV4cCI6MjA3MDA2NjY5NH0.BSh5066lya593cXhVDCvGu0l30X1pVq33FY3z1P7410'
+        
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+        
+        // 测试数据
+        const testData = [
+            {
+                "id": "msg_001",
+                "timestamp": 1704067200000,
+                "from_user": "客户张三",
+                "content": "请问你们的产品有什么功能？",
+                "message_type": "text"
+            },
+            {
+                "id": "msg_002", 
+                "timestamp": 1704067260000,
+                "from_user": "客服小李",
+                "content": "我们的产品主要有以下功能：1. 数据分析 2. 报表生成 3. 用户管理。可以帮助企业提高工作效率。",
+                "message_type": "text"
+            }
+        ]
+        
+        let currentStep = 0
+        const totalSteps = 6
+        
+        function updateProgress(step) {
+            currentStep = step
+            const percentage = (step / totalSteps) * 100
+            document.getElementById('progressBar').style.width = percentage + '%'
+        }
+        
+        function log(message, type = 'info', showSpinner = false) {
+            const results = document.getElementById('results')
+            const div = document.createElement('div')
+            div.className = `test ${type}`
+            const timestamp = new Date().toLocaleTimeString()
+            const spinner = showSpinner ? '<span class="spinner"></span> ' : ''
+            div.innerHTML = `<strong>[${timestamp}]</strong> ${spinner}${message}`
+            results.appendChild(div)
+            results.scrollTop = results.scrollHeight
+            return div
+        }
+        
+        function clearResults() {
+            document.getElementById('results').innerHTML = ''
+            document.getElementById('progressContainer').style.display = 'none'
+            currentStep = 0
+        }
+        
+        async function testSupabaseConnection() {
+            const logDiv = log('🔗 正在测试 Supabase 基础连接...', 'info', true)
+            try {
+                const { data, error } = await supabaseClient.from('categories').select('id, name').limit(1)
+                if (error) throw error
+                
+                logDiv.innerHTML = logDiv.innerHTML.replace(/spinner.*?<\/span>\s*/, '')
+                logDiv.className = 'test success'
+                logDiv.innerHTML += `<br>✅ Supabase 连接成功，找到 ${data.length} 个分类`
+                return { success: true, data }
+            } catch (error) {
+                logDiv.className = 'test error'
+                logDiv.innerHTML = logDiv.innerHTML.replace(/spinner.*?<\/span>\s*/, '')
+                logDiv.innerHTML += `<br>❌ Supabase 连接失败: ${error.message}`
+                return { success: false, error: error.message }
+            }
+        }
+        
+        async function testStorageBucket() {
+            const logDiv = log('📁 正在测试 Storage 存储桶访问权限...', 'info', true)
+            try {
+                const { data, error } = await supabaseClient.storage.from('wechat-files').list('', { limit: 1 })
+                if (error) throw error
+                
+                logDiv.className = 'test success'
+                logDiv.innerHTML = logDiv.innerHTML.replace(/spinner.*?<\/span>\s*/, '')
+                logDiv.innerHTML += `<br>✅ Storage 存储桶访问正常`
+                return { success: true }
+            } catch (error) {
+                logDiv.className = 'test error'
+                logDiv.innerHTML = logDiv.innerHTML.replace(/spinner.*?<\/span>\s*/, '')
+                logDiv.innerHTML += `<br>❌ Storage 存储桶访问失败: ${error.message}`
+                return { success: false, error: error.message }
+            }
+        }
+        
+        async function testFileUpload() {
+            const logDiv = log('⬆️ 正在测试文件上传到 Storage...', 'info', true)
+            try {
+                const fileName = `test-${Date.now()}.json`
+                const fileContent = JSON.stringify(testData, null, 2)
+                const file = new File([fileContent], fileName, { type: 'application/json' })
+                
+                const { data, error } = await supabaseClient.storage
+                    .from('wechat-files')
+                    .upload(fileName, file, {
+                        cacheControl: '3600',
+                        upsert: false
+                    })
+                
+                if (error) throw error
+                
+                logDiv.className = 'test success'
+                logDiv.innerHTML = logDiv.innerHTML.replace(/spinner.*?<\/span>\s*/, '')
+                logDiv.innerHTML += `<br>✅ 文件上传成功: ${fileName}`
+                
+                // 清理测试文件
+                setTimeout(async () => {
+                    await supabaseClient.storage.from('wechat-files').remove([fileName])
+                }, 5000)
+                
+                return { success: true, fileName, data }
+            } catch (error) {
+                logDiv.className = 'test error'
+                logDiv.innerHTML = logDiv.innerHTML.replace(/spinner.*?<\/span>\s*/, '')
+                logDiv.innerHTML += `<br>❌ 文件上传失败: ${error.message}`
+                return { success: false, error: error.message }
+            }
+        }
+        
+        async function testDatabaseInsert() {
+            const logDiv = log('🗄️ 正在测试数据库插入操作...', 'info', true)
+            try {
+                // 先测试插入上传历史记录
+                const uploadData = {
+                    filename: `test-${Date.now()}.json`,
+                    original_name: 'auto-test.json',
+                    file_size: 1000,
+                    status: 'processing',
+                    total_count: 2,
+                    processed_count: 0
+                }
+                
+                const { data, error } = await supabaseClient
+                    .from('upload_history')
+                    .insert(uploadData)
+                    .select()
+                
+                if (error) throw error
+                
+                logDiv.className = 'test success'
+                logDiv.innerHTML = logDiv.innerHTML.replace(/spinner.*?<\/span>\s*/, '')
+                logDiv.innerHTML += `<br>✅ 数据库插入成功，记录 ID: ${data[0].id}`
+                
+                // 清理测试数据
+                setTimeout(async () => {
+                    await supabaseClient.from('upload_history').delete().eq('id', data[0].id)
+                }, 5000)
+                
+                return { success: true, data: data[0] }
+            } catch (error) {
+                logDiv.className = 'test error'
+                logDiv.innerHTML = logDiv.innerHTML.replace(/spinner.*?<\/span>\s*/, '')
+                logDiv.innerHTML += `<br>❌ 数据库插入失败: ${error.message}`
+                return { success: false, error: error.message }
+            }
+        }
+        
+        async function testEdgeFunction() {
+            const logDiv = log('⚡ 正在测试 Edge Function 调用...', 'info', true)
+            try {
+                const { data, error } = await supabaseClient.functions.invoke('process-wechat-file', {
+                    body: {
+                        fileName: 'auto-test.json',
+                        fileContent: testData
+                    }
+                })
+                
+                if (error) throw error
+                
+                logDiv.className = 'test success'
+                logDiv.innerHTML = logDiv.innerHTML.replace(/spinner.*?<\/span>\s*/, '')
+                logDiv.innerHTML += `<br>✅ Edge Function 调用成功`
+                logDiv.innerHTML += `<br><pre>${JSON.stringify(data, null, 2)}</pre>`
+                
+                return { success: true, data }
+            } catch (error) {
+                logDiv.className = 'test error'
+                logDiv.innerHTML = logDiv.innerHTML.replace(/spinner.*?<\/span>\s*/, '')
+                logDiv.innerHTML += `<br>❌ Edge Function 调用失败: ${error.message}`
+                logDiv.innerHTML += `<br><pre>${JSON.stringify(error, null, 2)}</pre>`
+                return { success: false, error: error.message }
+            }
+        }
+        
+        async function testCompleteFlow() {
+            const logDiv = log('🔄 正在测试完整上传流程...', 'info', true)
+            try {
+                // 1. 上传文件
+                const fileName = `complete-test-${Date.now()}.json`
+                const fileContent = JSON.stringify(testData, null, 2)
+                const file = new File([fileContent], fileName, { type: 'application/json' })
+                
+                const { data: uploadData, error: uploadError } = await supabaseClient.storage
+                    .from('wechat-files')
+                    .upload(fileName, file)
+                
+                if (uploadError) throw new Error(`文件上传失败: ${uploadError.message}`)
+                
+                // 2. 调用 Edge Function 处理
+                const { data: processData, error: processError } = await supabaseClient.functions.invoke('process-wechat-file', {
+                    body: {
+                        fileName: fileName,
+                        fileContent: testData
+                    }
+                })
+                
+                if (processError) throw new Error(`处理失败: ${processError.message}`)
+                
+                logDiv.className = 'test success'
+                logDiv.innerHTML = logDiv.innerHTML.replace(/spinner.*?<\/span>\s*/, '')
+                logDiv.innerHTML += `<br>✅ 完整流程测试成功！`
+                logDiv.innerHTML += `<br>📁 文件: ${fileName}`
+                logDiv.innerHTML += `<br>📊 结果: 提取了 ${processData.data?.extracted_qa_pairs || 0} 个问答对`
+                
+                // 清理
+                setTimeout(async () => {
+                    await supabaseClient.storage.from('wechat-files').remove([fileName])
+                }, 10000)
+                
+                return { success: true, data: processData }
+            } catch (error) {
+                logDiv.className = 'test error'
+                logDiv.innerHTML = logDiv.innerHTML.replace(/spinner.*?<\/span>\s*/, '')
+                logDiv.innerHTML += `<br>❌ 完整流程测试失败: ${error.message}`
+                return { success: false, error: error.message }
+            }
+        }
+        
+        async function runFullDiagnosis() {
+            const startBtn = document.getElementById('startBtn')
+            startBtn.disabled = true
+            startBtn.textContent = '诊断进行中...'
+            
+            document.getElementById('progressContainer').style.display = 'block'
+            clearResults()
+            
+            log('🚀 开始完整自动诊断...', 'info')
+            
+            const results = {}
+            
+            // 1. 测试基础连接
+            updateProgress(1)
+            results.connection = await testSupabaseConnection()
+            if (!results.connection.success) {
+                log('🛑 基础连接失败，停止诊断', 'error')
+                startBtn.disabled = false
+                startBtn.textContent = '🚀 开始自动诊断'
+                return
+            }
+            
+            // 2. 测试存储桶
+            updateProgress(2)
+            results.storage_bucket = await testStorageBucket()
+            
+            // 3. 测试文件上传
+            updateProgress(3)
+            results.file_upload = await testFileUpload()
+            
+            // 4. 测试数据库操作
+            updateProgress(4)
+            results.database = await testDatabaseInsert()
+            
+            // 5. 测试 Edge Function
+            updateProgress(5)
+            results.edge_function = await testEdgeFunction()
+            
+            // 6. 测试完整流程
+            updateProgress(6)
+            results.complete_flow = await testCompleteFlow()
+            
+            // 生成诊断报告
+            generateDiagnosticReport(results)
+            
+            startBtn.disabled = false
+            startBtn.textContent = '🚀 开始自动诊断'
+            updateProgress(totalSteps)
+        }
+        
+        function generateDiagnosticReport(results) {
+            log('<h3>📊 诊断报告</h3>', 'info')
+            
+            const summary = {
+                '基础连接': results.connection.success,
+                '存储桶访问': results.storage_bucket.success,
+                '文件上传': results.file_upload.success,
+                '数据库操作': results.database.success,
+                'Edge Function': results.edge_function.success,
+                '完整流程': results.complete_flow.success
+            }
+            
+            log(`<pre>${JSON.stringify(summary, null, 2)}</pre>`, 'info')
+            
+            // 问题分析和建议
+            if (!results.storage_bucket.success) {
+                log('💡 建议：Storage 存储桶权限问题，需要检查 RLS 策略', 'warning')
+                log('解决方案：在 Supabase Dashboard 中禁用 storage.objects 的 RLS 或调整策略', 'warning')
+            }
+            
+            if (!results.file_upload.success) {
+                log('💡 建议：文件上传失败，检查 Storage 配置和权限', 'warning')
+                log('解决方案：验证 Storage bucket 是否正确创建，RLS 策略是否允许上传', 'warning')
+            }
+            
+            if (!results.database.success) {
+                log('💡 建议：数据库操作失败，检查表的 RLS 策略', 'warning')
+                log('解决方案：临时禁用相关表的 RLS 或调整策略允许插入', 'warning')
+            }
+            
+            if (!results.edge_function.success) {
+                log('💡 建议：Edge Function 调用失败，检查函数代码和权限', 'warning')
+                log('解决方案：检查函数是否正确部署，环境变量是否设置', 'warning')
+            }
+            
+            if (results.complete_flow.success) {
+                log('🎉 完整流程测试成功！文件上传功能正常工作', 'success')
+            } else {
+                log('❌ 完整流程测试失败，需要修复上述问题', 'error')
+            }
+            
+            log('✨ 自动诊断完成！', 'info')
+        }
+        
+        function testSingleStep() {
+            // 这里可以添加单步测试的功能
+            log('🔍 单步测试功能开发中...', 'info')
+        }
+    </script>
+</body>
+</html>

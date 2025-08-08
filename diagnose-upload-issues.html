@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>文件上传诊断工具</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        .info { background-color: #d1ecf1; border-color: #bee5eb; }
+        button { padding: 10px 20px; margin: 5px; background: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 3px; overflow-x: auto; }
+        .log { max-height: 300px; overflow-y: auto; }
+    </style>
+</head>
+<body>
+    <h1>📋 文件上传诊断工具</h1>
+    <p>这个工具将自动测试文件上传流程的各个环节，帮助定位问题。</p>
+    
+    <button onclick="runFullDiagnosis()">🔍 开始完整诊断</button>
+    <button onclick="clearLogs()">🗑️ 清空日志</button>
+    
+    <div id="results"></div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        // Supabase 配置
+        const SUPABASE_URL = 'https://atgkpaszasqhycvvszll.supabase.co'
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF0Z2twYXN6YXNxaHljdnZzemt\n\n\nsuperset-chart\nlseyJhdWQiOiJhdXRoZW50aWNhdGVkIiwiZXhwIjoyMDQxNDQ5ODM0LCJpYXQiOjE3MjU4ODk4MzQsImlzcyI6InN1cGFiYXNlIiwianRpIjoiYjBhMGVmMzAtYjMzNS00MzQ4LWJlZTUtYWI4YWRhZmM0ODc4Iiwicm9sZSI6ImFub24iLCJzdWIiOiJiMGEwZWYzMC1iMzM1LTQzNDgtYmVlNS1hYjhhZGFmYzQ4NzgiLCJ1c2VyX21ldGFkYXRhIjp7fX0.xNa9eJOaT_dqvFr5C7KZ2-cWpbhNZkfIq3o-3MZjOhY'
+        
+        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+        
+        // 测试数据
+        const testData = [
+            {
+                "id": "msg_001",
+                "timestamp": 1704067200000,
+                "from_user": "客户张三",
+                "content": "请问你们的产品有什么功能？",
+                "message_type": "text"
+            },
+            {
+                "id": "msg_002", 
+                "timestamp": 1704067260000,
+                "from_user": "客服小李",
+                "content": "我们的产品主要有以下功能：1. 数据分析 2. 报表生成 3. 用户管理。",
+                "message_type": "text"
+            }
+        ]
+        
+        function log(message, type = 'info') {
+            const results = document.getElementById('results')
+            const div = document.createElement('div')
+            div.className = `test ${type}`
+            div.innerHTML = `
+                <strong>[${new Date().toLocaleTimeString()}]</strong> ${message}
+            `
+            results.appendChild(div)
+            results.scrollTop = results.scrollHeight
+        }
+        
+        function clearLogs() {
+            document.getElementById('results').innerHTML = ''
+        }
+        
+        async function testSupabaseConnection() {
+            log('🔗 测试 Supabase 连接...', 'info')
+            try {
+                const { data, error } = await supabase.from('categories').select('*').limit(1)
+                if (error) throw error
+                log('✅ Supabase 连接成功', 'success')
+                return true
+            } catch (error) {
+                log(`❌ Supabase 连接失败: ${error.message}`, 'error')
+                return false
+            }
+        }
+        
+        async function testStorageUpload() {
+            log('📁 测试 Storage 文件上传...', 'info')
+            try {
+                const fileName = `test-${Date.now()}.json`
+                const fileContent = JSON.stringify(testData, null, 2)
+                const file = new File([fileContent], fileName, { type: 'application/json' })
+                
+                const { data, error } = await supabase.storage
+                    .from('wechat-files')
+                    .upload(fileName, file)
+                
+                if (error) throw error
+                log(`✅ Storage 上传成功: ${fileName}`, 'success')
+                return { success: true, fileName }
+            } catch (error) {
+                log(`❌ Storage 上传失败: ${error.message}`, 'error')
+                return { success: false, error: error.message }
+            }
+        }
+        
+        async function testEdgeFunction() {
+            log('⚡ 测试 Edge Function 调用...', 'info')
+            try {
+                const { data, error } = await supabase.functions.invoke('process-wechat-file', {
+                    body: {
+                        fileName: 'test-diagnosis.json',
+                        fileContent: testData
+                    }
+                })
+                
+                if (error) throw error
+                
+                log(`✅ Edge Function 调用成功`, 'success')
+                log(`<pre>${JSON.stringify(data, null, 2)}</pre>`, 'success')
+                return { success: true, data }
+            } catch (error) {
+                log(`❌ Edge Function 调用失败: ${error.message}`, 'error')
+                log(`<pre>${JSON.stringify(error, null, 2)}</pre>`, 'error')
+                return { success: false, error: error.message }
+            }
+        }
+        
+        async function testDatabaseInsert() {
+            log('🗄️ 测试直接数据库插入...', 'info')
+            try {
+                // 测试插入上传记录
+                const { data, error } = await supabase
+                    .from('upload_history')
+                    .insert({
+                        filename: 'test-diagnosis.json',
+                        original_name: 'test-diagnosis.json',
+                        file_size: 1000,
+                        status: 'completed',
+                        total_count: 2,
+                        processed_count: 2
+                    })
+                    .select()
+                
+                if (error) throw error
+                log('✅ 数据库插入成功', 'success')
+                return { success: true, data }
+            } catch (error) {
+                log(`❌ 数据库插入失败: ${error.message}`, 'error')
+                return { success: false, error: error.message }
+            }
+        }
+        
+        async function runFullDiagnosis() {
+            log('🚀 开始完整诊断...', 'info')
+            
+            // 1. 测试 Supabase 连接
+            const connectionTest = await testSupabaseConnection()
+            if (!connectionTest) {
+                log('🛑 Supabase 连接失败，停止诊断', 'error')
+                return
+            }
+            
+            // 2. 测试 Storage 上传
+            const storageTest = await testStorageUpload()
+            
+            // 3. 测试数据库插入
+            const dbTest = await testDatabaseInsert()
+            
+            // 4. 测试 Edge Function
+            const edgeFunctionTest = await testEdgeFunction()
+            
+            // 5. 生成诊断报告
+            log('📊 诊断报告生成中...', 'info')
+            
+            const report = {
+                supabase_connection: connectionTest,
+                storage_upload: storageTest.success,
+                database_insert: dbTest.success,
+                edge_function: edgeFunctionTest.success,
+                errors: {
+                    storage: storageTest.error || null,
+                    database: dbTest.error || null,
+                    edge_function: edgeFunctionTest.error || null
+                }
+            }
+            
+            log('<h3>🎯 诊断总结</h3>', 'info')
+            log(`<pre>${JSON.stringify(report, null, 2)}</pre>`, 'info')
+            
+            // 6. 建议修复方案
+            if (!storageTest.success) {
+                log('💡 建议：Storage 上传失败，检查 Storage RLS 策略', 'info')
+            }
+            if (!dbTest.success) {
+                log('💡 建议：数据库插入失败，检查表 RLS 策略', 'info')
+            }
+            if (!edgeFunctionTest.success) {
+                log('💡 建议：Edge Function 失败，检查函数代码和权限', 'info')
+            }
+            
+            log('✨ 诊断完成！', 'success')
+        }
+    </script>
+</body>
+</html>

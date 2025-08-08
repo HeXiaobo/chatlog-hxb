@@ -166,20 +166,21 @@ class QAPair(BaseModel):
         """获取问答统计信息"""
         from .category import Category
         
-        # 总数统计
-        total_qa = cls.query.count()
+        # 总数统计（只计算高质量QA对）
+        total_qa = cls.query.filter(cls.confidence >= 0.5).count()
         
-        # 分类统计
+        # 分类统计（只计算高质量QA对）
         category_stats = db.session.query(
             Category.name,
             func.count(cls.id).label('count')
-        ).outerjoin(cls).group_by(Category.id).all()
+        ).outerjoin(cls, db.and_(Category.id == cls.category_id, cls.confidence >= 0.5))\
+         .group_by(Category.id).all()
         
-        # 回答者统计
+        # 回答者统计（只计算高质量QA对）
         advisor_stats = db.session.query(
             cls.advisor,
             func.count(cls.id).label('count')
-        ).filter(cls.advisor.isnot(None))\
+        ).filter(db.and_(cls.advisor.isnot(None), cls.confidence >= 0.5))\
          .group_by(cls.advisor)\
          .order_by(func.count(cls.id).desc())\
          .limit(10).all()
@@ -189,9 +190,9 @@ class QAPair(BaseModel):
             func.avg(cls.confidence).label('avg_confidence'),
             func.min(cls.confidence).label('min_confidence'),
             func.max(cls.confidence).label('max_confidence'),
-            func.count(db.case([(cls.confidence >= 0.8, 1)])).label('high_confidence'),
-            func.count(db.case([(db.and_(cls.confidence >= 0.5, cls.confidence < 0.8), 1)])).label('medium_confidence'),
-            func.count(db.case([(cls.confidence < 0.5, 1)])).label('low_confidence')
+            func.count(db.case((cls.confidence >= 0.8, 1))).label('high_confidence'),
+            func.count(db.case((db.and_(cls.confidence >= 0.5, cls.confidence < 0.8), 1))).label('medium_confidence'),
+            func.count(db.case((cls.confidence < 0.5, 1))).label('low_confidence')
         ).first()
         
         return {

@@ -28,8 +28,9 @@ class Category(BaseModel):
         """转换为字典"""
         data = super().to_dict(include_relationships=False)  # 不包含关联关系
         
-        # 动态计算QA数量
-        data['qa_count'] = self.qa_pairs.count()
+        # 动态计算高质量QA数量（过滤掉低置信度的原始消息）
+        from .qa import QAPair
+        data['qa_count'] = self.qa_pairs.filter(QAPair.confidence >= 0.5).count()
         
         return data
     

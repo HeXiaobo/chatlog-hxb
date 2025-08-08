@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom'
 import SearchBar from '../components/search/SearchBar'
 import UploadZone from '../components/upload/UploadZone'
 import type { Category, QAPair, APIResponse, SearchFilters, UploadResponse } from '../types'
-import { apiAdapter as api } from '../services/api-adapter'
+import api from '../services/api'
 
 const HomePage: React.FC = () => {
   const navigate = useNavigate()
@@ -28,35 +28,38 @@ const HomePage: React.FC = () => {
     setLoading(true)
     setApiError(null)
     try {
-      // 加载分类
-      const categoriesResponse = await api.getCategories()
-      setCategories(categoriesResponse.data || [])
+      // 加载分类数据
+      const categoriesResponse = await api.get('/categories')
+      if (categoriesResponse.data.success) {
+        setCategories(categoriesResponse.data.data || [])
+      }
 
-      // 加载最近的问答
-      const qasResponse = await api.getQAPairs({ limit: 5 })
-      setRecentQAs(qasResponse.data || [])
+      // 加载最近的问答记录 (高质量的)
+      const qasResponse = await api.get('/qa', {
+        params: {
+          page: 1,
+          per_page: 5,
+          confidence_min: 0.5  // 只显示高质量的问答
+        }
+      })
+      if (qasResponse.data.success) {
+        setRecentQAs(qasResponse.data.data || [])
+      }
 
       // 加载统计数据
-      const statsResponse = await api.getStatistics()
-      const statsData = statsResponse.data || {}
-      
-      setStats({
-        totalQAs: statsData.total_qa || 0,
-        totalCategories: statsData.total_categories || 0,
-        totalUploads: 0 // 暂时设为0
-      })
-
-      // 检查是否有错误消息需要显示
-      if (!categoriesResponse.success && categoriesResponse.message) {
-        setApiError(categoriesResponse.message)
-      } else if (!qasResponse.success && qasResponse.message) {
-        setApiError(qasResponse.message)
-      } else if (!statsResponse.success && statsResponse.message) {
-        setApiError(statsResponse.message)
+      const statsResponse = await api.get('/admin/stats')
+      if (statsResponse.data.success) {
+        const statsData = statsResponse.data.data.qa_statistics || {}
+        setStats({
+          totalQAs: statsData.total_qa || 0,
+          totalCategories: categoriesResponse.data.data?.length || 0,
+          totalUploads: statsResponse.data.data.upload_statistics?.total_uploads || 0
+        })
       }
-    } catch (error) {
+
+    } catch (error: any) {
       console.error('Failed to load data:', error)
-      setApiError('数据加载失败，请检查网络连接或 Supabase 配置。')
+      setApiError(`数据加载失败: ${error.response?.data?.error?.message || error.message || '网络连接问题'}`)
       
       // 设置默认数据
       setCategories([

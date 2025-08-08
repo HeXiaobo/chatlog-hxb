@@ -72,8 +72,15 @@ def get_qa_pairs():
         page = request.args.get('page', 1, type=int)
         per_page = request.args.get('per_page', 20, type=int)
         limit = request.args.get('limit', type=int)
+        confidence_min = request.args.get('confidence_min', type=float)
         
-        query = QAPair.query.order_by(QAPair.created_at.desc())
+        query = QAPair.query
+        
+        # 添加置信度过滤
+        if confidence_min is not None:
+            query = query.filter(QAPair.confidence >= confidence_min)
+            
+        query = query.order_by(QAPair.created_at.desc())
         
         if limit:
             qas = query.limit(limit).all()

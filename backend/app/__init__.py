@@ -59,12 +59,14 @@ def register_blueprints(app):
     from app.routes.upload import upload_bp
     from app.routes.search import search_bp
     from app.routes.admin import admin_bp
+    from app.routes.ai_admin import ai_admin_bp
     
     # API路由
     app.register_blueprint(api_bp, url_prefix='/api/v1')
     app.register_blueprint(upload_bp, url_prefix='/api/v1/upload')
     app.register_blueprint(search_bp, url_prefix='/api/v1/search')
     app.register_blueprint(admin_bp, url_prefix='/api/v1/admin')
+    app.register_blueprint(ai_admin_bp, url_prefix='/api/v1/ai')
 
 
 def register_error_handlers(app):

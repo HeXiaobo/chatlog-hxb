@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from sqlalchemy import text, func
 from app import db
 from app.models import QAPair, Category
+from app.utils.cache import search_cache, category_cache
 
 logger = logging.getLogger(__name__)
 
@@ -63,7 +64,7 @@ class SearchService:
                         advisor,
                         content='qa_pairs',
                         content_rowid='id',
-                        tokenize='simple'
+                        tokenize='unicode61'
                     )
                 """))
                 
@@ -102,6 +103,7 @@ class SearchService:
         except Exception as e:
             logger.error(f"Failed to rebuild FTS index: {str(e)}")
     
+    @search_cache(ttl=300)  # 缓存搜索结果5分钟
     def search(self, query: str, category_ids: List[int] = None, 
                advisor: str = None, page: int = 1, per_page: int = 20,
                sort_by: str = 'relevance') -> SearchResult:
@@ -384,6 +386,7 @@ class SearchService:
             logger.debug(f"Failed to generate suggestions: {str(e)}")
             return []
     
+    @category_cache(ttl=600)  # 缓存热门搜索10分钟
     def get_popular_searches(self, limit: int = 10) -> List[Dict[str, Any]]:
         """获取热门搜索（模拟实现）"""
         from app.utils.cache import cached

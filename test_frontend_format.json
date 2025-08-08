@@ -1,0 +1,44 @@
+[
+  {
+    "id": "msg_000001",
+    "timestamp": 1723122000000,
+    "from_user": "小明",
+    "content": "你们的产品有什么功能？",
+    "message_type": "text"
+  },
+  {
+    "id": "msg_000002",
+    "timestamp": 1723122060000,
+    "from_user": "客服小李",
+    "content": "我们的产品主要有以下功能：1. 数据分析和报表生成 2. 用户管理系统 3. 自动化工作流 4. 集成第三方服务。您对哪个功能比较感兴趣？",
+    "message_type": "text"
+  },
+  {
+    "id": "msg_000003",
+    "timestamp": 1723122120000,
+    "from_user": "小张",
+    "content": "价格怎么样？有优惠吗？",
+    "message_type": "text"
+  },
+  {
+    "id": "msg_000004",
+    "timestamp": 1723122180000,
+    "from_user": "客服小王",
+    "content": "我们有三种套餐：基础版299元/月，专业版599元/月，企业版1299元/月。现在新用户注册可以免费试用15天，还有首月8折优惠哦！",
+    "message_type": "text"
+  },
+  {
+    "id": "msg_000005",
+    "timestamp": 1723122240000,
+    "from_user": "小李",
+    "content": "怎么使用数据分析功能？",
+    "message_type": "text"
+  },
+  {
+    "id": "msg_000006",
+    "timestamp": 1723122300000,
+    "from_user": "客服小李",
+    "content": "数据分析功能使用很简单：1. 首先上传您的数据文件 2. 选择分析模板或自定义分析方案 3. 设置参数和筛选条件 4. 点击生成报表即可。系统支持Excel、CSV等多种格式。",
+    "message_type": "text"
+  }
+]

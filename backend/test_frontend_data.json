@@ -1,0 +1,23 @@
+[
+  {
+    "id": "msg_000001",
+    "timestamp": 1723119600000,
+    "from_user": "张三",
+    "content": "这个产品怎么使用？",
+    "message_type": "text"
+  },
+  {
+    "id": "msg_000002",
+    "timestamp": 1723119660000,
+    "from_user": "李四",
+    "content": "你可以按照以下步骤操作：1. 打开应用 2. 点击设置 3. 配置参数",
+    "message_type": "text"
+  },
+  {
+    "id": "msg_000003",
+    "timestamp": 1723119720000,
+    "from_user": "张三",
+    "content": "好的，谢谢！",
+    "message_type": "text"
+  }
+]

@@ -1,0 +1,28 @@
+{
+  "models": {
+    "kimi": {
+      "provider": "kimi",
+      "model_name": "moonshot-v1-8k",
+      "api_key": "sk-20BINpVp1cpBpFuxcbMd7LpCOSFD03eyPLqg7r5jNCoPUMj6",
+      "api_base": "https://api.moonshot.cn/v1/",
+      "max_tokens": 8000,
+      "temperature": 0.7,
+      "timeout": 60,
+      "enabled": true,
+      "cost_per_1k_tokens": 0.012,
+      "daily_limit": 5000
+    }
+  },
+  "usage_stats": {
+    "kimi": {
+      "total_requests": 0,
+      "successful_requests": 0,
+      "failed_requests": 0,
+      "total_tokens_used": 0,
+      "total_cost": 0.0,
+      "daily_requests": 0,
+      "daily_tokens": 0,
+      "daily_cost": 0.0
+    }
+  }
+}

@@ -134,4 +134,251 @@ export const preloadData = async (endpoints: string[]): Promise<void> => {
   }
 }
 
+// ======================
+// API 函数定义
+// ======================
+
+// 上传文件（同步处理）
+export const uploadFile = async (formData: FormData): Promise<any> => {
+  try {
+    const response = await api.post('/upload/file', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      },
+      timeout: 300000, // 5分钟超时
+      onUploadProgress: (progressEvent) => {
+        // 可以在这里处理上传进度
+        if (progressEvent.total) {
+          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total)
+          console.log(`Upload progress: ${percentCompleted}%`)
+        }
+      }
+    })
+    return response.data
+  } catch (error) {
+    console.error('Upload file error:', error)
+    throw error
+  }
+}
+
+// 异步上传文件（后台任务处理）
+export const uploadFileAsync = async (formData: FormData): Promise<any> => {
+  try {
+    const response = await api.post('/upload/file/async', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      },
+      timeout: 60000, // 1分钟超时（仅上传，不包括处理）
+      onUploadProgress: (progressEvent) => {
+        if (progressEvent.total) {
+          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total)
+          console.log(`Async upload progress: ${percentCompleted}%`)
+        }
+      }
+    })
+    return response.data
+  } catch (error) {
+    console.error('Async upload file error:', error)
+    throw error
+  }
+}
+
+// 获取异步任务状态
+export const getTaskStatus = async (taskId: string): Promise<any> => {
+  try {
+    const response = await api.get(`/upload/task/${taskId}/status`)
+    return response.data
+  } catch (error) {
+    console.error('Get task status error:', error)
+    throw error
+  }
+}
+
+// 取消异步任务
+export const cancelTask = async (taskId: string): Promise<any> => {
+  try {
+    const response = await api.post(`/upload/task/${taskId}/cancel`)
+    return response.data
+  } catch (error) {
+    console.error('Cancel task error:', error)
+    throw error
+  }
+}
+
+// 获取任务队列统计信息
+export const getQueueStats = async (): Promise<any> => {
+  try {
+    const response = await api.get('/upload/queue/stats')
+    return response.data
+  } catch (error) {
+    console.error('Get queue stats error:', error)
+    throw error
+  }
+}
+
+// 获取WebSocket连接统计
+export const getWebSocketStats = async (): Promise<any> => {
+  try {
+    const response = await api.get('/upload/websocket/stats')
+    return response.data
+  } catch (error) {
+    console.error('Get WebSocket stats error:', error)
+    throw error
+  }
+}
+
+// 获取上传状态
+export const getUploadStatus = async (uploadId: number): Promise<any> => {
+  try {
+    const response = await api.get(`/upload/status/${uploadId}`)
+    return response.data
+  } catch (error) {
+    console.error('Get upload status error:', error)
+    throw error
+  }
+}
+
+// 获取上传历史
+export const getUploadHistory = async (params?: {
+  page?: number
+  per_page?: number
+  status?: string
+}): Promise<any> => {
+  try {
+    const response = await api.get('/upload/history', { params })
+    return response.data
+  } catch (error) {
+    console.error('Get upload history error:', error)
+    throw error
+  }
+}
+
+// 清理临时文件
+export const cleanupFiles = async (maxAgeHours: number = 24): Promise<any> => {
+  try {
+    const response = await api.post('/upload/cleanup', { max_age_hours: maxAgeHours })
+    return response.data
+  } catch (error) {
+    console.error('Cleanup files error:', error)
+    throw error
+  }
+}
+
+// 搜索问答对
+export const searchQA = async (params: {
+  q?: string
+  category?: string
+  advisor?: string
+  page?: number
+  per_page?: number
+  sort_by?: string
+}): Promise<any> => {
+  try {
+    const response = await api.get('/search', { params })
+    return response.data
+  } catch (error) {
+    console.error('Search QA error:', error)
+    throw error
+  }
+}
+
+// 获取问答对详情
+export const getQADetail = async (id: number): Promise<any> => {
+  try {
+    const response = await api.get(`/qa/${id}`)
+    return response.data
+  } catch (error) {
+    console.error('Get QA detail error:', error)
+    throw error
+  }
+}
+
+// 更新问答对
+export const updateQA = async (id: number, data: any): Promise<any> => {
+  try {
+    const response = await api.put(`/qa/${id}`, data)
+    return response.data
+  } catch (error) {
+    console.error('Update QA error:', error)
+    throw error
+  }
+}
+
+// 删除问答对
+export const deleteQA = async (id: number): Promise<any> => {
+  try {
+    const response = await api.delete(`/qa/${id}`)
+    return response.data
+  } catch (error) {
+    console.error('Delete QA error:', error)
+    throw error
+  }
+}
+
+// 获取分类列表
+export const getCategories = async (): Promise<any> => {
+  try {
+    const response = await api.get('/categories')
+    return response.data
+  } catch (error) {
+    console.error('Get categories error:', error)
+    throw error
+  }
+}
+
+// 创建分类
+export const createCategory = async (data: { name: string; description?: string }): Promise<any> => {
+  try {
+    const response = await api.post('/categories', data)
+    return response.data
+  } catch (error) {
+    console.error('Create category error:', error)
+    throw error
+  }
+}
+
+// 更新分类
+export const updateCategory = async (id: number, data: { name?: string; description?: string }): Promise<any> => {
+  try {
+    const response = await api.put(`/categories/${id}`, data)
+    return response.data
+  } catch (error) {
+    console.error('Update category error:', error)
+    throw error
+  }
+}
+
+// 获取搜索建议
+export const getSearchSuggestions = async (query: string): Promise<any> => {
+  try {
+    const response = await api.get('/search/suggestions', { params: { q: query } })
+    return response.data
+  } catch (error) {
+    console.error('Get search suggestions error:', error)
+    throw error
+  }
+}
+
+// 获取系统统计
+export const getSystemStats = async (): Promise<any> => {
+  try {
+    const response = await api.get('/admin/stats')
+    return response.data
+  } catch (error) {
+    console.error('Get system stats error:', error)
+    throw error
+  }
+}
+
+// 重建搜索索引
+export const rebuildSearchIndex = async (): Promise<any> => {
+  try {
+    const response = await api.post('/admin/reindex')
+    return response.data
+  } catch (error) {
+    console.error('Rebuild search index error:', error)
+    throw error
+  }
+}
+
 export default api

@@ -1,0 +1,37 @@
+[
+  {
+    "id": "msg_000001",
+    "timestamp": 1754497631000,
+    "from_user": "胡老师助理🚗",
+    "content": "新群⁶₈⁰",
+    "message_type": "text"
+  },
+  {
+    "id": "msg_000002",
+    "timestamp": 1754533111000,
+    "from_user": "林",
+    "content": "老师，10 点半您方便上线么[皱眉]",
+    "message_type": "text"
+  },
+  {
+    "id": "msg_000003",
+    "timestamp": 1754535867000,
+    "from_user": "LiLi",
+    "content": "45左右上线方便么？",
+    "message_type": "text"
+  },
+  {
+    "id": "msg_000004",
+    "timestamp": 1754536056000,
+    "from_user": "胡老师助理🚗",
+    "content": "可以的，没问题",
+    "message_type": "text"
+  },
+  {
+    "id": "msg_000005",
+    "timestamp": 1754536156000,
+    "from_user": "林",
+    "content": "好的，谢谢老师",
+    "message_type": "text"
+  }
+]

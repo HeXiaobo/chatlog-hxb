@@ -24,6 +24,11 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:5001',
         changeOrigin: true
+      },
+      '/chatlog-api': {
+        target: 'http://localhost:5030',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/chatlog-api/, '')
       }
     }
   }

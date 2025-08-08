@@ -3,6 +3,11 @@ Flask==2.3.3
 Flask-SQLAlchemy==3.0.5
 Flask-Migrate==4.0.5
 Flask-CORS==4.0.0
+Flask-SocketIO==5.3.6
+
+# WebSocket and async support
+python-socketio==5.10.0
+eventlet==0.33.3
 
 # Database
 SQLAlchemy==2.0.21
@@ -14,6 +19,9 @@ marshmallow-sqlalchemy==0.29.0
 
 # File handling
 Werkzeug==2.3.7
+
+# Async file processing
+aiofiles==23.2.1
 
 # Data processing
 pandas==2.1.1
